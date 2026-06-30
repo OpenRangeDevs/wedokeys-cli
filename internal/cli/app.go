@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -26,6 +28,45 @@ type App struct {
 	// Exec replaces the current process (env exec / subshell). Defaults to
 	// syscall.Exec; tests inject a capturing stub.
 	Exec func(argv0 string, argv []string, envv []string) error
+
+	// Interactive overrides terminal detection for prompts. nil = auto-detect
+	// (prompt only when stdin is a TTY); tests set it explicitly.
+	Interactive *bool
+
+	// OpenURL opens a URL in the browser (login). Defaults to the OS opener
+	// (open/xdg-open); tests inject a capture.
+	OpenURL func(url string) error
+}
+
+func (a *App) openURL(url string) error {
+	if a.OpenURL != nil {
+		return a.OpenURL(url)
+	}
+	if runtime.GOOS == "darwin" {
+		return exec.Command("open", url).Start()
+	}
+	return exec.Command("xdg-open", url).Start()
+}
+
+// interactive reports whether prompts should be shown: the explicit override if
+// set, otherwise whether stdin is a terminal.
+func (a *App) interactive() bool {
+	if a.Interactive != nil {
+		return *a.Interactive
+	}
+	return isTerminal(a.in())
+}
+
+func isTerminal(r io.Reader) bool {
+	f, ok := r.(*os.File)
+	if !ok {
+		return false
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 func (a *App) in() io.Reader {

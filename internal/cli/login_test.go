@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -86,5 +87,64 @@ func TestLoginBlankTokenAborts(t *testing.T) {
 	err := app.Login(LoginOptions{})
 	if err == nil || err.Error() != "Token cannot be blank." {
 		t.Fatalf("err = %v, want blank-token error", err)
+	}
+}
+
+func TestLoginWithAPIURLFlagSavesServerAndToken(t *testing.T) {
+	home, start := t.TempDir(), t.TempDir() // fresh home, no seeded config
+	srv := resolveServer(t, 400, `{"error":"missing_aliases"}`)
+
+	app, _, _ := newTestApp(t, home, start, "")
+	if err := app.Login(LoginOptions{APIURL: srv.URL, Token: "wdk_sat_valid"}); err != nil {
+		t.Fatalf("Login err = %v", err)
+	}
+	if got := savedToken(t, home); got != "wdk_sat_valid" {
+		t.Fatalf("saved token = %q, want wdk_sat_valid", got)
+	}
+	if got := savedAPIURL(t, home); got != srv.URL {
+		t.Fatalf("saved api_url = %q, want %q", got, srv.URL)
+	}
+}
+
+func TestLoginInteractivePromptsForServerAndToken(t *testing.T) {
+	home, start := t.TempDir(), t.TempDir() // fresh home
+	srv := resolveServer(t, 400, `{"error":"missing_aliases"}`)
+
+	// Interactive: stdin supplies the server URL, the browser-open answer (no), then the token.
+	app, _, errBuf := newTestApp(t, home, start, srv.URL+"\nn\nwdk_sat_typed\n")
+	yes := true
+	app.Interactive = &yes
+
+	if err := app.Login(LoginOptions{}); err != nil {
+		t.Fatalf("Login err = %v", err)
+	}
+	if got := savedToken(t, home); got != "wdk_sat_typed" {
+		t.Fatalf("saved token = %q, want wdk_sat_typed", got)
+	}
+	if got := savedAPIURL(t, home); got != srv.URL {
+		t.Fatalf("saved api_url = %q, want %q", got, srv.URL)
+	}
+	s := errBuf.String()
+	if !strings.Contains(s, "WeDoKeys server") || !strings.Contains(s, "/service_accounts/new") {
+		t.Errorf("expected server prompt + token URL on stderr, got %q", s)
+	}
+}
+
+func TestLoginOffersToOpenBrowser(t *testing.T) {
+	home, start := t.TempDir(), t.TempDir()
+	srv := resolveServer(t, 400, `{"error":"missing_aliases"}`)
+
+	// Answer "y" to the browser prompt; capture the URL the seam is asked to open.
+	app, _, _ := newTestApp(t, home, start, srv.URL+"\ny\nwdk_sat_typed\n")
+	yes := true
+	app.Interactive = &yes
+	var opened string
+	app.OpenURL = func(url string) error { opened = url; return nil }
+
+	if err := app.Login(LoginOptions{}); err != nil {
+		t.Fatalf("Login err = %v", err)
+	}
+	if want := srv.URL + "/service_accounts/new"; opened != want {
+		t.Fatalf("opened = %q, want %q", opened, want)
 	}
 }

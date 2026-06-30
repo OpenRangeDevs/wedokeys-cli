@@ -75,6 +75,23 @@ func savedToken(t *testing.T, home string) string {
 	return ""
 }
 
+// savedAPIURL reads api_url from home's config.yml, or "" if absent.
+func savedAPIURL(t *testing.T, home string) string {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(home, ".wedokeys", "config.yml"))
+	if err != nil {
+		return ""
+	}
+	var m map[string]any
+	if err := yaml.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("parse saved config: %v", err)
+	}
+	if s, ok := m["api_url"].(string); ok {
+		return s
+	}
+	return ""
+}
+
 // newTestApp builds an App writing to buffers, rooted at home/start. Its Exec
 // fails the test if invoked (commands that should abort never reach exec); pass
 // a capturing func via app.Exec to test the exec path.
