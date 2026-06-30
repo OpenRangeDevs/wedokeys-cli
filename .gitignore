@@ -1,0 +1,11 @@
+# Built binaries (Go module at repo root)
+/wdk
+/kamal-secrets-wedokeys
+
+# GoReleaser output
+/dist/
+
+# Go test / build artifacts
+*.test
+*.out
+coverage.txt
