@@ -47,6 +47,16 @@ release:
   github:
     owner: OpenRangeDevs
     name: wedokeys-cli
+  header: |
+    First Go release of the `wdk` CLI — a single self-contained binary installable via
+    `curl … | sh`, with no Ruby runtime required. Same commands, flags, config files, and
+    API behavior as the original Ruby CLI, verified by a Go↔Ruby parity harness.
+
+    ## Install
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/OpenRangeDevs/wedokeys-cli/main/install.sh | sh
+    ```
+    macOS and Linux, amd64 and arm64. Installs `wdk` and the `kamal-secrets-wedokeys` adapter.
 
 changelog:
   use: github
