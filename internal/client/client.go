@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -122,43 +123,97 @@ func (c *Client) ResolveByAliases(aliases []string, project, environment string)
 	if err != nil {
 		return nil, err
 	}
-
-	req, err := http.NewRequest(http.MethodPost, c.apiURL+resolvePath, bytes.NewReader(payload))
-	if err != nil {
+	var parsed resolveResponse
+	if err := c.doJSON(http.MethodPost, resolvePath, payload, &parsed); err != nil {
 		return nil, err
 	}
+	return &Result{Resolved: []Secret(parsed.Resolved), Errors: parsed.Errors}, nil
+}
+
+// Project is a project the token can access (from ListProjects).
+type Project struct {
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+}
+
+// Alias is a project alias resolvable for the token (from ListAliases).
+type Alias struct {
+	Name        string `json:"name"`
+	Environment string `json:"environment"`
+}
+
+// ListProjects returns the projects the token can access (GET /api/v1/projects).
+func (c *Client) ListProjects() ([]Project, error) {
+	var parsed struct {
+		Projects []Project `json:"projects"`
+	}
+	if err := c.doJSON(http.MethodGet, "/api/v1/projects", nil, &parsed); err != nil {
+		return nil, err
+	}
+	return parsed.Projects, nil
+}
+
+// ListAliases returns the active aliases for a project in the token's
+// environment (GET /api/v1/projects/:slug/aliases).
+func (c *Client) ListAliases(slug string) ([]Alias, error) {
+	var parsed struct {
+		Aliases []Alias `json:"aliases"`
+	}
+	path := "/api/v1/projects/" + url.PathEscape(slug) + "/aliases"
+	if err := c.doJSON(http.MethodGet, path, nil, &parsed); err != nil {
+		return nil, err
+	}
+	return parsed.Aliases, nil
+}
+
+// doJSON performs an authenticated JSON request. On a 2xx response it unmarshals
+// the body into out (skipped if out is nil); non-2xx maps to AuthError (401) /
+// APIError (other), and transport failures to NetworkError.
+func (c *Client) doJSON(method, path string, body []byte, out any) error {
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequest(method, c.apiURL+path, reader)
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", userAgentPrefix+version.Version)
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return nil, &NetworkError{msg: fmt.Sprintf("Could not reach %s: %s", c.apiURL, err)}
+		return &NetworkError{msg: fmt.Sprintf("Could not reach %s: %s", c.apiURL, err)}
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	respBody, _ := io.ReadAll(resp.Body)
 
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
-		var parsed resolveResponse
-		if err := json.Unmarshal(body, &parsed); err != nil {
-			return nil, &APIError{msg: fmt.Sprintf("invalid API response: %s", err), Status: resp.StatusCode}
+		if out == nil {
+			return nil
 		}
-		return &Result{Resolved: []Secret(parsed.Resolved), Errors: parsed.Errors}, nil
+		if err := json.Unmarshal(respBody, out); err != nil {
+			return &APIError{msg: fmt.Sprintf("invalid API response: %s", err), Status: resp.StatusCode}
+		}
+		return nil
 
 	case resp.StatusCode == http.StatusUnauthorized:
-		return nil, &AuthError{msg: "Authentication failed. Run `wdk login` to refresh your token."}
+		return &AuthError{msg: "Authentication failed. Run `wdk login` to refresh your token."}
 
 	default:
 		msg := fmt.Sprintf("API error %d", resp.StatusCode)
 		var parsed struct {
 			Message string `json:"message"`
 		}
-		if json.Unmarshal(body, &parsed) == nil && parsed.Message != "" {
+		if json.Unmarshal(respBody, &parsed) == nil && parsed.Message != "" {
 			msg = parsed.Message
 		}
-		return nil, &APIError{msg: msg, Status: resp.StatusCode}
+		return &APIError{msg: msg, Status: resp.StatusCode}
 	}
 }
 

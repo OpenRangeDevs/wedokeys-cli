@@ -169,6 +169,75 @@ func TestNetworkErrorOnTimeout(t *testing.T) {
 	}
 }
 
+func TestListProjects(t *testing.T) {
+	var gotMethod, gotPath, gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath, gotAuth = r.Method, r.URL.Path, r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"projects":[{"slug":"demo-store","name":"Demo Store"},{"slug":"demo-analytics","name":"Demo Analytics"}],"request_id":"req_x"}`)
+	}))
+	defer srv.Close()
+
+	projects, err := New(srv.URL, "wdk_sat_t").ListProjects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Project{{Slug: "demo-store", Name: "Demo Store"}, {Slug: "demo-analytics", Name: "Demo Analytics"}}
+	if !reflect.DeepEqual(projects, want) {
+		t.Fatalf("projects = %v, want %v", projects, want)
+	}
+	if gotMethod != http.MethodGet || gotPath != "/api/v1/projects" {
+		t.Errorf("request = %s %s, want GET /api/v1/projects", gotMethod, gotPath)
+	}
+	if gotAuth != "Bearer wdk_sat_t" {
+		t.Errorf("Authorization = %q", gotAuth)
+	}
+}
+
+func TestListAliases(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"aliases":[{"name":"STRIPE_KEY","environment":"development"}],"request_id":"req_x"}`)
+	}))
+	defer srv.Close()
+
+	aliases, err := New(srv.URL, "t").ListAliases("demo-store")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []Alias{{Name: "STRIPE_KEY", Environment: "development"}}; !reflect.DeepEqual(aliases, want) {
+		t.Fatalf("aliases = %v, want %v", aliases, want)
+	}
+	if gotPath != "/api/v1/projects/demo-store/aliases" {
+		t.Errorf("path = %q, want /api/v1/projects/demo-store/aliases", gotPath)
+	}
+}
+
+func TestListProjectsAuthError(t *testing.T) {
+	srv := jsonServer(t, 401, `{"error":"unauthorized"}`)
+	defer srv.Close()
+	_, err := New(srv.URL, "t").ListProjects()
+	var ae *AuthError
+	if !errors.As(err, &ae) {
+		t.Fatalf("err = %T %v, want *AuthError", err, err)
+	}
+}
+
+func TestListAliasesAPIError(t *testing.T) {
+	srv := jsonServer(t, 400, `{"error":"project_scope_denied","message":"Service account is not scoped to this project"}`)
+	defer srv.Close()
+	_, err := New(srv.URL, "t").ListAliases("other")
+	var ae *APIError
+	if !errors.As(err, &ae) {
+		t.Fatalf("err = %T %v, want *APIError", err, err)
+	}
+	if ae.Status != 400 || ae.Error() != "Service account is not scoped to this project" {
+		t.Errorf("APIError = %d %q", ae.Status, ae.Error())
+	}
+}
+
 func jsonServer(t *testing.T, status int, body string) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
