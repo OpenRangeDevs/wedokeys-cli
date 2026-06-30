@@ -48,9 +48,7 @@ release:
     owner: OpenRangeDevs
     name: wedokeys-cli
   header: |
-    First Go release of the `wdk` CLI — a single self-contained binary installable via
-    `curl … | sh`, with no Ruby runtime required. Same commands, flags, config files, and
-    API behavior as the original Ruby CLI, verified by a Go↔Ruby parity harness.
+    The WeDoKeys CLI (`wdk`) — a single self-contained binary, no Ruby runtime required.
 
     ## Install
     ```sh
