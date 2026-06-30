@@ -6,11 +6,9 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-)
 
-// Version is the CLI version string, injected at build time via -ldflags
-// (-X github.com/OpenRangeDevs/wedokeys-cli/internal/cli.Version=<tag>).
-var Version = "dev"
+	"github.com/OpenRangeDevs/wedokeys-cli/internal/version"
+)
 
 // newRootCmd builds the `wdk` command tree. Subcommands are added here as
 // they are implemented (M5); for now it carries only `version`.
@@ -27,7 +25,7 @@ func newRootCmd() *cobra.Command {
 		Short: "Print the wdk version",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			fmt.Fprintf(cmd.OutOrStdout(), "wdk %s\n", Version)
+			fmt.Fprintf(cmd.OutOrStdout(), "wdk %s\n", version.Version)
 			return nil
 		},
 	})
