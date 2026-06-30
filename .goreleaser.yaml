@@ -1,0 +1,53 @@
+# GoReleaser config — builds the wdk + kamal-secrets-wedokeys binaries for
+# macOS/Linux (amd64/arm64), archives them, generates checksums, and publishes a
+# GitHub Release on a v* tag. See https://goreleaser.com.
+version: 2
+
+project_name: wdk
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: wdk
+    main: ./cmd/wdk
+    binary: wdk
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X github.com/OpenRangeDevs/wedokeys-cli/internal/version.Version={{ .Version }}
+
+  - id: kamal-secrets-wedokeys
+    main: ./cmd/kamal-secrets-wedokeys
+    binary: kamal-secrets-wedokeys
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X github.com/OpenRangeDevs/wedokeys-cli/internal/version.Version={{ .Version }}
+
+archives:
+  - id: wdk
+    ids: [wdk, kamal-secrets-wedokeys]
+    # Must match the name install.sh constructs: wdk_<version>_<os>_<arch>.tar.gz
+    name_template: "wdk_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: OpenRangeDevs
+    name: wedokeys-cli
+
+changelog:
+  use: github
+  sort: asc

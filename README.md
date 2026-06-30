@@ -5,11 +5,41 @@ secrets at runtime instead of copying them into `.env` files. `wdk` authenticate
 service-account token, resolves the aliases listed in your project's `wdk.yml`, and injects
 them as environment variables for local dev, scripts, and Kamal deploys.
 
-> **Status: Go port in progress.** This repository is the public home of the `wdk` CLI. The
-> CLI is being ported from Ruby to a single self-contained Go binary (installable via a
-> `curl … | sh` script — no Ruby runtime required). The original Ruby implementation is kept
-> as a reference in [`ruby-legacy/`](ruby-legacy/) and will be retired once the Go CLI is
-> proven. Install instructions land with the first release.
+`wdk` is a single self-contained Go binary — no Ruby runtime required. The original Ruby
+implementation is kept as a reference in [`ruby-legacy/`](ruby-legacy/) and will be retired once the
+Go CLI is proven.
+
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/OpenRangeDevs/wedokeys-cli/main/install.sh | sh
+```
+
+This installs `wdk` (and the `kamal-secrets-wedokeys` adapter) into `~/.local/bin` — override with
+`WDK_INSTALL_DIR`. macOS and Linux, amd64 and arm64. Or grab a binary from the
+[releases page](https://github.com/OpenRangeDevs/wedokeys-cli/releases), or `go install
+github.com/OpenRangeDevs/wedokeys-cli/cmd/wdk@latest`.
+
+## Usage
+
+```sh
+wdk login                                             # paste your service account token
+wdk login --token wdk_sat_...
+
+# wdk.yml in your project root lists the project slug + alias names:
+#   project: my-app
+#   secrets: [STRIPE_KEY, POSTGRES_PASSWORD]
+
+WDK_ENV=production wdk env exec -- bin/rails server    # run with secrets injected
+wdk env export --env production                        # print export statements (direnv, scripts)
+wdk subshell -e production                             # interactive shell with secrets loaded
+```
+
+The token is stored in `~/.wedokeys/config.yml` (mode 0600). The environment comes from `--env`,
+`WDK_ENV`, or `KAMAL_DESTINATION`. If any alias fails to resolve the command exits non-zero and
+nothing runs with partial secrets; pass `--allow-missing` to override. For Kamal, the
+`kamal-secrets-wedokeys` adapter wraps `wdk kamal-fetch` — see
+[`ruby-legacy/README.md`](ruby-legacy/README.md) for the `.kamal/secrets` snippet.
 
 ## Documentation
 
