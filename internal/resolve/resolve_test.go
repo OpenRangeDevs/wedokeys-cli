@@ -60,7 +60,7 @@ func TestCheckAllowMissingReturnsNilButStillPrints(t *testing.T) {
 
 func TestAssertSingleLineAcceptsSingleLineValues(t *testing.T) {
 	var buf bytes.Buffer
-	secrets := []client.Secret{{Name: "A", Value: "one"}, {Name: "B", Value: "two"}}
+	secrets := []client.Secret{{Name: "A", Value: "one", IsString: true}, {Name: "B", Value: "two", IsString: true}}
 	if err := AssertSingleLine(&buf, secrets); err != nil {
 		t.Fatalf("err = %v, want nil", err)
 	}
@@ -72,8 +72,8 @@ func TestAssertSingleLineAcceptsSingleLineValues(t *testing.T) {
 func TestAssertSingleLineRejectsMultiline(t *testing.T) {
 	var buf bytes.Buffer
 	secrets := []client.Secret{
-		{Name: "OK", Value: "fine"},
-		{Name: "PEM", Value: "-----BEGIN-----\nline2\n-----END-----"},
+		{Name: "OK", Value: "fine", IsString: true},
+		{Name: "PEM", Value: "-----BEGIN-----\nline2\n-----END-----", IsString: true},
 	}
 	err := AssertSingleLine(&buf, secrets)
 	var me *MultilineError
@@ -84,6 +84,19 @@ func TestAssertSingleLineRejectsMultiline(t *testing.T) {
 		t.Errorf("Count = %d, want 1", me.Count)
 	}
 	if !strings.HasPrefix(buf.String(), "PEM: value is not a single line") {
+		t.Errorf("stderr = %q", buf.String())
+	}
+}
+
+func TestAssertSingleLineRejectsNonString(t *testing.T) {
+	var buf bytes.Buffer
+	secrets := []client.Secret{{Name: "DB", Value: `{"user":"u"}`, IsString: false}}
+	err := AssertSingleLine(&buf, secrets)
+	var me *MultilineError
+	if !errors.As(err, &me) {
+		t.Fatalf("err = %T %v, want *MultilineError for a non-string (whole-secret) value", err, err)
+	}
+	if !strings.HasPrefix(buf.String(), "DB: value is not a single line") {
 		t.Errorf("stderr = %q", buf.String())
 	}
 }

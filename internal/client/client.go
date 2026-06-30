@@ -26,6 +26,9 @@ const (
 type Secret struct {
 	Name  string
 	Value string
+	// IsString reports whether the JSON value was a string (vs an object,
+	// array, number, or bool). The Kamal output guard rejects non-strings.
+	IsString bool
 }
 
 // ResolveError is a per-item resolution failure from the `errors` array.
@@ -190,7 +193,8 @@ func (o *orderedSecrets) UnmarshalJSON(data []byte) error {
 		if err := dec.Decode(&raw); err != nil {
 			return err
 		}
-		*o = append(*o, Secret{Name: key, Value: rawToString(raw)})
+		value, isString := rawToString(raw)
+		*o = append(*o, Secret{Name: key, Value: value, IsString: isString})
 	}
 
 	// consume closing '}'
@@ -200,13 +204,14 @@ func (o *orderedSecrets) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// rawToString renders a JSON value as the string the CLI uses. JSON strings are
-// unquoted; non-string values (rare — e.g. a whole-secret reference) keep their
-// raw JSON text so downstream guards can reject them.
-func rawToString(raw json.RawMessage) string {
+// rawToString renders a JSON value as the string the CLI uses and reports
+// whether it was a JSON string. JSON strings are unquoted; non-string values
+// (rare — e.g. a whole-secret reference) keep their raw JSON text so downstream
+// guards can reject them.
+func rawToString(raw json.RawMessage) (string, bool) {
 	var s string
 	if err := json.Unmarshal(raw, &s); err == nil {
-		return s
+		return s, true
 	}
-	return string(raw)
+	return strings.TrimSpace(string(raw)), false
 }

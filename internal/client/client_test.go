@@ -34,7 +34,7 @@ func TestResolveByAliasesReturnsResolved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if want := []Secret{{Name: "POSTGRES_PASSWORD", Value: "secret123"}}; !reflect.DeepEqual(res.Resolved, want) {
+	if want := []Secret{{Name: "POSTGRES_PASSWORD", Value: "secret123", IsString: true}}; !reflect.DeepEqual(res.Resolved, want) {
 		t.Fatalf("Resolved = %v, want %v", res.Resolved, want)
 	}
 	if len(res.Errors) != 0 {
@@ -67,7 +67,7 @@ func TestResolvePreservesResolvedOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []Secret{{"B", "2"}, {"A", "1"}, {"C", "3"}}
+	want := []Secret{{"B", "2", true}, {"A", "1", true}, {"C", "3", true}}
 	if !reflect.DeepEqual(res.Resolved, want) {
 		t.Fatalf("Resolved order = %v, want %v (response order preserved)", res.Resolved, want)
 	}
@@ -84,6 +84,19 @@ func TestResolveParsesErrors(t *testing.T) {
 	want := []ResolveError{{Reference: "OLD_KEY", Code: "inactive_reference", Message: "Reference is not active"}}
 	if !reflect.DeepEqual(res.Errors, want) {
 		t.Fatalf("Errors = %v, want %v", res.Errors, want)
+	}
+}
+
+func TestResolveMarksNonStringValue(t *testing.T) {
+	srv := jsonServer(t, 200, `{"resolved":{"DB":{"user":"u","password":"p"}},"errors":[]}`)
+	defer srv.Close()
+
+	res, err := New(srv.URL, "t").ResolveByAliases([]string{"DB"}, "app", "production")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Resolved) != 1 || res.Resolved[0].IsString {
+		t.Fatalf("Resolved = %+v, want one non-string secret", res.Resolved)
 	}
 }
 

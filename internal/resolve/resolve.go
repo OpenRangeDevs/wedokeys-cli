@@ -57,7 +57,7 @@ func (e *MultilineError) Error() string {
 func AssertSingleLine(stderr io.Writer, secrets []client.Secret) error {
 	offenders := 0
 	for _, s := range secrets {
-		if strings.ContainsAny(s.Value, "\r\n") {
+		if !s.IsString || strings.ContainsAny(s.Value, "\r\n") {
 			offenders++
 			fmt.Fprintf(stderr, "%s: value is not a single line (multiline secret or whole-secret \"*\" reference); reference a specific field instead.\n", s.Name)
 		}

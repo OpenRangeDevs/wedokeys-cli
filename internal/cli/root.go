@@ -10,34 +10,55 @@ import (
 	"github.com/OpenRangeDevs/wedokeys-cli/internal/version"
 )
 
-// newRootCmd builds the `wdk` command tree. Subcommands are added here as
-// they are implemented (M5); for now it carries only `version`.
-func newRootCmd() *cobra.Command {
+// newRootCmd builds the `wdk` command tree against the given App.
+func newRootCmd(app *App) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "wdk",
 		Short:         "WeDoKeys CLI — resolve secrets at runtime",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+	root.SetOut(app.out())
+	root.SetErr(app.err())
 
-	root.AddCommand(&cobra.Command{
-		Use:   "version",
-		Short: "Print the wdk version",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			fmt.Fprintf(cmd.OutOrStdout(), "wdk %s\n", version.Version)
+	var showVersion bool
+	root.Flags().BoolVarP(&showVersion, "version", "v", false, "Print the wdk version")
+	root.RunE = func(cmd *cobra.Command, _ []string) error {
+		if showVersion {
+			fmt.Fprintf(app.out(), "wdk %s\n", version.Version)
 			return nil
-		},
-	})
+		}
+		return cmd.Help()
+	}
 
+	root.AddCommand(
+		newLoginCmd(app),
+		newSubshellCmd(app),
+		newEnvCmd(app),
+		newKamalFetchCmd(app),
+		newVersionCmd(app),
+	)
 	return root
 }
 
-// Execute runs the root command and returns a process exit code (0 on
-// success, 1 on error), mirroring the Ruby CLI's exit_on_failure? behavior.
+func newVersionCmd(app *App) *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print the wdk version",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			fmt.Fprintf(app.out(), "wdk %s\n", version.Version)
+			return nil
+		},
+	}
+}
+
+// Execute runs the CLI against the process streams and returns an exit code
+// (0 on success, 1 on error), mirroring the Ruby CLI's exit_on_failure?.
 func Execute() int {
-	if err := newRootCmd().Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	app := &App{In: os.Stdin, Out: os.Stdout, Err: os.Stderr}
+	if err := newRootCmd(app).Execute(); err != nil {
+		fmt.Fprintln(app.err(), err)
 		return 1
 	}
 	return 0
