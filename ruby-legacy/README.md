@@ -1,4 +1,10 @@
-# wdk — the WeDoKeys CLI
+# wdk — the WeDoKeys CLI (Ruby reference implementation)
+
+> **Legacy / reference only.** This is the original Ruby implementation of `wdk`. The CLI now ships
+> as a Go binary (see the [repository README](../README.md)); this code is kept **in parity** with
+> the Go version as a reference and fallback, and will be archived once the Go CLI is proven.
+> Behavioral changes must land in both, verified by the parity harness
+> (`go test -tags parity ./test/parity/`). It is **not** published to RubyGems.
 
 Fetch your project's secrets at runtime instead of copying them into `.env`
 files. `wdk` authenticates with a service-account token, resolves the aliases

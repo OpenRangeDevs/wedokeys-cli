@@ -16,6 +16,25 @@ them as environment variables for local dev, scripts, and Kamal deploys.
 - [`docs/API.md`](docs/API.md) — the `/api/v1/resolve` request/response contract and error codes.
 - [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md) — running the whole loop against a local server.
 
+## Development
+
+```sh
+go build ./cmd/wdk        # build the binary
+go test ./...             # unit tests
+gofmt -l . && go vet ./...
+```
+
+### Parity with the Ruby reference
+
+While both implementations are maintained, any change to CLI behavior must land in **both** the Go
+code and [`ruby-legacy/`](ruby-legacy/). The parity harness runs the Go binary and the Ruby CLI
+against the same stub server and asserts identical stdout/stderr/exit code:
+
+```sh
+( cd ruby-legacy && bundle install )   # once
+go test -tags parity ./test/parity/
+```
+
 ## Related
 
 The WeDoKeys application and API (the server this CLI talks to) is maintained separately.
