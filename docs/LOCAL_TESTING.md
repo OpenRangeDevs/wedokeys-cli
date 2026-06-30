@@ -42,51 +42,42 @@ This prints everything the rest of this guide uses:
 Rerunnable: it tears down and recreates the "WDK Demo" account each time
 (`bin/rails wdk:demo:teardown` removes it entirely).
 
-## 4. Set up the CLI (no install needed)
+## 4. Install the CLI
 
-Resolve the real ruby binary first — version-manager shims (asdf, rbenv)
-silently fail with exit 126 once `$HOME` is overridden in step 5:
+The `wdk` CLI is a self-contained Go binary
+([OpenRangeDevs/wedokeys-cli](https://github.com/OpenRangeDevs/wedokeys-cli)):
 
 ```sh
-export WDK_REPO=/path/to/wedokeys
-export WDK_RUBY=$(ruby -e 'puts RbConfig.ruby')
-wdk() { "$WDK_RUBY" -I "$WDK_REPO/cli/lib" "$WDK_REPO/cli/bin/wdk" "$@"; }
-wdk help   # sanity check — prints the command list
+curl -fsSL https://raw.githubusercontent.com/OpenRangeDevs/wedokeys-cli/main/install.sh | sh
+wdk version   # sanity check
 ```
 
-(Alternative: `cd cli && gem build wdk.gemspec && gem install wdk-*.gem`.)
-
-## 5. Point the CLI at localhost, in an isolated HOME
+## 5. Log in (pointed at localhost, in an isolated HOME)
 
 The CLI reads `$HOME/.wedokeys/config.yml`. Use a throwaway HOME so the demo
-can't touch a real config:
+can't touch a real config; `--api-url` points it at the local server (no file
+editing):
 
 ```sh
 export DEMO_HOME=$(mktemp -d)
-mkdir -p "$DEMO_HOME/.wedokeys"
-cat > "$DEMO_HOME/.wedokeys/config.yml" <<EOF
-api_url: http://localhost:3000
-EOF
-HOME="$DEMO_HOME" wdk login --token <PROJECT-SCOPED TOKEN FROM STEP 3>
+HOME="$DEMO_HOME" wdk login --api-url http://localhost:3000 --token <PROJECT-SCOPED TOKEN FROM STEP 3>
 ```
 
-Expected: `Logged in. Token saved to ~/.wedokeys/config.yml` — and the file
-still contains the `api_url` line (login merges, it does not overwrite).
+Expected: `Logged in. Token saved to ~/.wedokeys/config.yml`. (Interactively,
+plain `wdk login` prompts for the server and token.)
 
 > Prefix every `wdk` command below with `HOME="$DEMO_HOME"`, or
 > `export HOME="$DEMO_HOME"` in a dedicated terminal for the demo.
 
-## 6. Create the fake consumer project
+## 6. Configure the consumer project
 
-Anywhere **outside** the wedokeys repo:
+Anywhere **outside** the wedokeys repo, let `wdk init` write `wdk.yml` for you —
+it auto-selects the project the token is scoped to and lists its aliases:
 
 ```sh
 mkdir -p ~/Code/wdk-demo-app && cd ~/Code/wdk-demo-app
-cat > wdk.yml <<EOF
-project: demo-store
-secrets:
-  - STRIPE_KEY
-EOF
+HOME="$DEMO_HOME" wdk init --all     # → project: demo-store, secrets: [STRIPE_KEY]
+# or interactively: HOME="$DEMO_HOME" wdk init
 ```
 
 ## 7. The demo
@@ -154,7 +145,7 @@ wdk kamal-fetch --from demo-store/development STRIPE_KEY
 Every denial above (except unknown names) wrote a `SecretAccessEvent`:
 
 ```sh
-cd $WDK_REPO
+# from the wedokeys repo
 bin/rails runner 'SecretAccessEvent.order(:id).last(10).each { |e| puts [e.result, e.reason_code, e.secret_reference&.alias_name].compact.join("  ") }'
 ```
 
@@ -191,7 +182,7 @@ rm -rf ~/Code/wdk-demo-app "$DEMO_HOME"
 | `API error: environment does not match service account environment` | Demo tokens are `development`-only; use `WDK_ENV=development` |
 | `API error: Project not found` | `project:` in wdk.yml must be a printed slug (`demo-store` / `demo-analytics`) |
 | CLI hits `app.wedokeys.com` | `$HOME` is not the demo HOME, or `api_url` missing from `$DEMO_HOME/.wedokeys/config.yml` |
-| `wdk` exits 126 with no output | You're calling a ruby version-manager shim with `$HOME` overridden — use the `WDK_RUBY` function from step 4 |
-| `No wdk.yml found` | Run from `~/Code/wdk-demo-app` |
+| `No wdk.yml found` | Run `wdk init` (or `wdk env …`) from the consumer project directory (e.g. `~/Code/wdk-demo-app`), not the wedokeys repo |
 
-CLI usage reference: [cli/README.md](../cli/README.md). API contract: [API.md](API.md).
+CLI usage reference: [OpenRangeDevs/wedokeys-cli](https://github.com/OpenRangeDevs/wedokeys-cli).
+API contract: [API.md](API.md).

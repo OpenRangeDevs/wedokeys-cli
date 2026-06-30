@@ -22,18 +22,30 @@ github.com/OpenRangeDevs/wedokeys-cli/cmd/wdk@latest`.
 
 ## Usage
 
+Two guided, one-time steps — no file editing:
+
 ```sh
-wdk login                                             # paste your service account token
-wdk login --token wdk_sat_...
+wdk login          # prompts for the server (defaults to production) + token
+wdk init           # in your project: pick the project + secrets → writes wdk.yml
+```
 
-# wdk.yml in your project root lists the project slug + alias names:
-#   project: my-app
-#   secrets: [STRIPE_KEY, POSTGRES_PASSWORD]
+Then run things with secrets injected:
 
+```sh
 WDK_ENV=production wdk env exec -- bin/rails server    # run with secrets injected
 wdk env export --env production                        # print export statements (direnv, scripts)
 wdk subshell -e production                             # interactive shell with secrets loaded
 ```
+
+Both setup commands take flags for automation:
+
+```sh
+wdk login --api-url http://localhost:3000 --token wdk_sat_...
+wdk init --project my-app --secret STRIPE_KEY --secret POSTGRES_PASSWORD   # or --all
+```
+
+Every command has `--help`. `wdk init` lists the projects/aliases your token can see, so you never
+copy slugs or alias names by hand.
 
 The token is stored in `~/.wedokeys/config.yml` (mode 0600). The environment comes from `--env`,
 `WDK_ENV`, or `KAMAL_DESTINATION`. If any alias fails to resolve the command exits non-zero and

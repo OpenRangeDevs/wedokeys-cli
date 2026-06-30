@@ -88,6 +88,44 @@ intentionally invalid resolve request and treating any non-401 as success —
 the endpoint must keep returning 400, not 401, for an authenticated request
 with bad params.)
 
+## GET /api/v1/projects
+
+Lists the projects the token can access (used by `wdk init`). An account-level
+token sees every project in its account; a project-scoped token sees only its
+own project. Same bearer auth as `/resolve`; `401` when the token is
+missing/invalid.
+
+### Response (200)
+
+```json
+{
+  "projects": [ { "slug": "my-app", "name": "My App" } ],
+  "request_id": "req_..."
+}
+```
+
+## GET /api/v1/projects/:slug/aliases
+
+Lists the **active** aliases of a project in the **token's environment** — i.e.
+exactly the aliases that would resolve for this token (used by `wdk init`).
+Aliases without a name, inactive ones, and other environments are omitted.
+
+### Response (200)
+
+```json
+{
+  "aliases": [ { "name": "STRIPE_KEY", "environment": "development" } ],
+  "request_id": "req_..."
+}
+```
+
+### Errors (HTTP 400)
+
+| Code | Meaning |
+|------|---------|
+| `project_scope_denied` | a project-scoped token requested a different (or unknown) project — checked **before** not-found so it can't probe whether other projects exist |
+| `project_not_found` | an account-level token requested a slug that doesn't exist |
+
 ## POST /api/v1/token/exchange
 
 Exchanges a static token (`wdk_sat_…`) for a short-lived ephemeral token
