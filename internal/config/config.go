@@ -12,10 +12,11 @@ import (
 // does not override api_url.
 const DefaultAPIURL = "https://app.wedokeys.com"
 
-// Configuration errors. Messages match the Ruby CLI verbatim for parity.
+// Configuration errors. ErrNotConfigured / ErrMissingEnvironment match the Ruby
+// CLI verbatim (parity); ErrMissingProject nudges the Go-only `wdk init`.
 var (
 	ErrNotConfigured      = errors.New("No token found. Run `wdk login` first.")
-	ErrMissingProject     = errors.New("No wdk.yml found. Create one in your project root with:\n  project: <slug>")
+	ErrMissingProject     = errors.New("No wdk.yml found. Run `wdk init` to create one.")
 	ErrMissingEnvironment = errors.New("Environment not set. Pass --env, or set WDK_ENV / KAMAL_DESTINATION.")
 )
 

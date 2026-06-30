@@ -156,16 +156,19 @@ func TestParity(t *testing.T) {
 	defer srv.Close()
 
 	scenarios := []struct {
-		name    string
-		secrets []string // wdk.yml secrets (nil = none)
-		env     map[string]string
-		args    []string
+		name          string
+		secrets       []string // wdk.yml secrets (nil = none)
+		env           map[string]string
+		args          []string
+		stderrDiffers bool // Go intentionally diverges (e.g. a `wdk init` nudge Ruby lacks)
 	}{
 		{name: "version", args: []string{"version"}},
 		{name: "env-export", secrets: []string{"A", "B"}, env: map[string]string{"WDK_ENV": "production"}, args: []string{"env", "export"}},
 		{name: "env-export-partial", secrets: []string{"A", "MISSING_KEY"}, env: map[string]string{"WDK_ENV": "production"}, args: []string{"env", "export"}},
 		{name: "env-export-allow-missing", secrets: []string{"A", "MISSING_KEY"}, env: map[string]string{"WDK_ENV": "production"}, args: []string{"env", "export", "--allow-missing"}},
-		{name: "env-export-no-project", env: map[string]string{"WDK_ENV": "production"}, args: []string{"env", "export"}},
+		// Go nudges "Run `wdk init`" here; the Ruby reference has no init command,
+		// so only the exit code is compared.
+		{name: "env-export-no-project", env: map[string]string{"WDK_ENV": "production"}, args: []string{"env", "export"}, stderrDiffers: true},
 		{name: "kamal-fetch", env: map[string]string{"KAMAL_DESTINATION": "production"}, args: []string{"kamal-fetch", "A", "B"}},
 		{name: "kamal-fetch-multiline", env: map[string]string{"KAMAL_DESTINATION": "production"}, args: []string{"kamal-fetch", "TLS_KEY"}},
 		{name: "kamal-fetch-no-aliases", env: map[string]string{"KAMAL_DESTINATION": "production"}, args: []string{"kamal-fetch"}},
@@ -193,7 +196,7 @@ func TestParity(t *testing.T) {
 			if goRes.stdout != rubyRes.stdout {
 				t.Errorf("stdout differs:\n go:   %q\n ruby: %q", goRes.stdout, rubyRes.stdout)
 			}
-			if goRes.stderr != rubyRes.stderr {
+			if !sc.stderrDiffers && goRes.stderr != rubyRes.stderr {
 				t.Errorf("stderr differs:\n go:   %q\n ruby: %q", goRes.stderr, rubyRes.stderr)
 			}
 			if goRes.code != rubyRes.code {

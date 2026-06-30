@@ -96,8 +96,9 @@ func newEnvCmd(app *App) *cobra.Command {
 func newEnvExecCmd(app *App) *cobra.Command {
 	var opts EnvOptions
 	cmd := &cobra.Command{
-		Use:   "exec -- COMMAND [ARGS]",
-		Short: "Run a command with secrets injected into its environment",
+		Use:     "exec -- COMMAND [ARGS]",
+		Short:   "Run a command with secrets injected into its environment",
+		Example: "  WDK_ENV=production wdk env exec -- bin/rails server",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return app.EnvExec(opts, args)
 		},
@@ -109,9 +110,10 @@ func newEnvExecCmd(app *App) *cobra.Command {
 func newEnvExportCmd(app *App) *cobra.Command {
 	var opts EnvOptions
 	cmd := &cobra.Command{
-		Use:   "export",
-		Short: "Print secrets as shell export statements (for scripting / direnv)",
-		Args:  cobra.NoArgs,
+		Use:     "export",
+		Short:   "Print secrets as shell export statements (for scripting / direnv)",
+		Example: "  wdk env export --env production\n  eval \"$(wdk env export -e production)\"",
+		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return app.EnvExport(opts)
 		},

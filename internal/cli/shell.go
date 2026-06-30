@@ -42,9 +42,10 @@ func (a *App) Subshell(opts ShellOptions) error {
 func newSubshellCmd(app *App) *cobra.Command {
 	var opts ShellOptions
 	cmd := &cobra.Command{
-		Use:   "subshell",
-		Short: "Open a sub-shell with secrets loaded into the environment",
-		Args:  cobra.NoArgs,
+		Use:     "subshell",
+		Short:   "Open a sub-shell with secrets loaded into the environment",
+		Example: "  wdk subshell -e production",
+		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return app.Subshell(opts)
 		},
