@@ -33,6 +33,7 @@ func newRootCmd(app *App) *cobra.Command {
 
 	root.AddCommand(
 		newLoginCmd(app),
+		newInitCmd(app),
 		newSubshellCmd(app),
 		newEnvCmd(app),
 		newKamalFetchCmd(app),
