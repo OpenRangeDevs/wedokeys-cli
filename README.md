@@ -16,9 +16,11 @@ curl -fsSL https://raw.githubusercontent.com/OpenRangeDevs/wedokeys-cli/main/ins
 ```
 
 This installs `wdk` (and the `kamal-secrets-wedokeys` adapter) into `~/.local/bin` — override with
-`WDK_INSTALL_DIR`. macOS and Linux, amd64 and arm64. Or grab a binary from the
+`WDK_INSTALL_DIR` — and sets up **tab completion** for your shell where it can do so safely
+(oh-my-zsh, bash, fish; it never edits rc files — otherwise it prints the one-liner to run).
+macOS and Linux, amd64 and arm64. Or grab a binary from the
 [releases page](https://github.com/OpenRangeDevs/wedokeys-cli/releases), or `go install
-github.com/OpenRangeDevs/wedokeys-cli/cmd/wdk@latest`.
+github.com/OpenRangeDevs/wedokeys-cli/cmd/wdk@latest` (then see `wdk completion --help`).
 
 ## Usage
 
