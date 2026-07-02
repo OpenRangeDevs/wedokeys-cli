@@ -73,3 +73,37 @@ case ":$PATH:" in
 	*) echo "wdk: note — $BINDIR is not on your PATH. Add it with:"
 	   echo "       export PATH=\"$BINDIR:\$PATH\"" ;;
 esac
+
+# --- shell completions ---------------------------------------------------------
+# Install tab completion where the user's shell auto-loads it by convention.
+# Never edits rc files; falls back to printing the manual one-liner.
+install_completions() {
+	shell_name="$(basename "${SHELL:-}")"
+	case "$shell_name" in
+	zsh)
+		if [ -d "$HOME/.oh-my-zsh" ]; then
+			mkdir -p "$HOME/.oh-my-zsh/completions"
+			"$BINDIR/wdk" completion zsh > "$HOME/.oh-my-zsh/completions/_wdk"
+			echo "wdk: tab completion installed (open a new terminal to activate)"
+		else
+			echo "wdk: enable tab completion with:"
+			echo "       echo 'source <(wdk completion zsh)' >> ~/.zshrc"
+		fi
+		;;
+	bash)
+		comp_dir="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+		mkdir -p "$comp_dir"
+		"$BINDIR/wdk" completion bash > "$comp_dir/wdk"
+		echo "wdk: tab completion installed (open a new terminal to activate)"
+		;;
+	fish)
+		mkdir -p "$HOME/.config/fish/completions"
+		"$BINDIR/wdk" completion fish > "$HOME/.config/fish/completions/wdk.fish"
+		echo "wdk: tab completion installed (open a new terminal to activate)"
+		;;
+	*)
+		echo "wdk: enable tab completion with: wdk completion --help"
+		;;
+	esac
+}
+install_completions || echo "wdk: completion setup skipped (run 'wdk completion --help' to set it up manually)"
